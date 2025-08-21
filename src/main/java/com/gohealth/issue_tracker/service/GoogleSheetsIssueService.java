@@ -25,6 +25,7 @@ public class GoogleSheetsIssueService implements IssueService {
     private final String SHEET_NAME = "Sheet1";
     private final String SPREADSHEET_ID = "1tcWPle1hz2XBf7iZv2lcruIj4O7FRo6w5mUHUiu8FYU";
     private final String RANGE = "Sheet1!A:F"; // A: ID, B: Description, C: Parent ID, D: Status, E: Created at, F: Updated at
+    private final Map<String, Issue> issues = new HashMap<>();
 
     public GoogleSheetsIssueService() throws GeneralSecurityException, IOException {
         sheetsService = new Sheets.Builder(

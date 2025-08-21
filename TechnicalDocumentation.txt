@@ -34,25 +34,7 @@ Add Key File to Project: Place the downloaded credentials.json file in your proj
 Share the Google Sheet: Share the Google Sheet with the email address of the service account you created, granting it Editor permissions.
 
 5. Usage
-The application is a runnable JAR that can be executed using Maven.
-
-General Command Syntax:
-
-mvn spring-boot:run -Dspring-boot.run.arguments="[command],[arguments]"
-
-Commands:
-
-Create Issue: Creates a new issue with a description and optional parent ID.
-
-mvn spring-boot:run -Dspring-boot.run.arguments="create,--description='Bug on checkout page',--parentId='AD-123'"
-
-Update Issue: Updates an existing issue's status.
-
-mvn spring-boot:run -Dspring-boot.run.arguments="update,--id='AD-456',--status='IN_PROGRESS'"
-
-List Issues: Lists all issues that match a specific status.
-
-mvn spring-boot:run -Dspring-boot.run.arguments="list,--status='OPEN'"
+See UserDocumentation.txt
 
 6. Testing Strategy
 The application uses JUnit 5 and Mockito for testing.
