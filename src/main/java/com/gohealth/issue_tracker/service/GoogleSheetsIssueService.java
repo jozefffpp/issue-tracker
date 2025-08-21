@@ -74,33 +74,57 @@ public class GoogleSheetsIssueService implements IssueService {
 
     @Override
     public Issue createIssue(String description, String parentId) {
+        String newId = "AD-" + (listAllIssues().size() + 1);
+        Issue newIssue = new Issue(newId, description, parentId, IssueStatus.OPEN.name());
         try {
-            // Validate parent ID
-            if (parentId != null && !issueExists(parentId)) {
-                throw new RuntimeException("Parent issue not found with ID: " + parentId);
+            // Check if parentId is not null before using it.
+            // If it is null, an empty string is used instead.
+            List<Object> row = new ArrayList<>();
+            row.add(newIssue.getId());
+            row.add(newIssue.getDescription());
+            if (newIssue.getParentId() != null) {
+                row.add(newIssue.getParentId());
+            } else {
+                row.add(""); // Add an empty string if parentId is null
             }
+            row.add(newIssue.getStatus());
+            row.add(newIssue.getCreatedAt().toString());
+            row.add(newIssue.getUpdatedAt().toString());
 
-            String newId = getNextIdFromCounter();
-
-            ValueRange body = new ValueRange()
-                    .setValues(List.of(List.of(
-                            newId,
-                            description,
-                            parentId,
-                            IssueStatus.OPEN.name(),
-                            LocalDateTime.now().toString(),
-                            LocalDateTime.now().toString()
-                    )));
-            sheetsService.spreadsheets().values().append(SPREADSHEET_ID, RANGE, body)
+            ValueRange body = new ValueRange().setValues(Arrays.asList(row));
+            sheetsService.spreadsheets().values()
+                    .append(SPREADSHEET_ID, RANGE, body)
                     .setValueInputOption("RAW")
-                    .setInsertDataOption("INSERT_ROWS")
                     .execute();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return newIssue;
+    }
 
-            return new Issue(newId, description, parentId, IssueStatus.OPEN.name());
+    private List<Issue> listAllIssues() {
+        List<Issue> issues = new ArrayList<>();
+        try {
+            ValueRange response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, RANGE).execute();
+            List<List<Object>> values = response.getValues();
+            if (values != null && !values.isEmpty()) {
+                for (int i = 1; i < values.size(); i++) {
+                    List<Object> row = values.get(i);
+                    Issue issue = new Issue();
+                    issue.setId((String) row.get(0));
+                    issue.setDescription((String) row.get(1));
+                    issue.setParentId(row.size() > 2 ? (String) row.get(2) : null);
+                    issue.setStatus((String) row.get(3));
+                    issue.setCreatedAt(LocalDateTime.parse((String) row.get(4)));
+                    issue.setUpdatedAt(LocalDateTime.parse((String) row.get(5)));
+                    issues.add(issue);
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return null;
+        return issues;
     }
 
     @Override

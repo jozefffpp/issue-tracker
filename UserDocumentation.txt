@@ -31,8 +31,8 @@ Parameters:
 
 Example:
 
-docker run --rm josephpupava/myapp:latest create -d "Customer 360 job is not ingesting into Search Engine"
-docker run --rm josephpupava/myapp:latest create -d "Databricks job failing on parsing DoB" -p AD-1
+docker run --rm jpupava1/myapp:latest create -d "Customer 360 job is not ingesting into Search Engine"
+docker run --rm jpupava1/myapp:latest create -d "Databricks job failing on parsing DoB" -p AD-1
 
 2. Update Issue Status
 
@@ -51,8 +51,8 @@ Parameters:
 
 Example:
 
-docker run --rm josephpupava/myapp:latest update -i AD-1 -s IN_PROGRESS
-docker run --rm josephpupava/myapp:latest update -i AD-2 -s CLOSED
+docker run --rm jpupava1/myapp:latest update -i AD-1 -s IN_PROGRESS
+docker run --rm jpupava1/myapp:latest update -i AD-2 -s CLOSED
 
 3. List Issues
 
@@ -69,8 +69,8 @@ Parameters:
 
 Example:
 
-docker run --rm josephpupava/myapp:latest list -s OPEN
-docker run --rm josephpupava/myapp:latest list -s CLOSED
+docker run --rm jpuapva1/myapp:latest list -s OPEN
+docker run --rm jpupava1/myapp:latest list -s CLOSED
 
 
 Output Example:
@@ -85,7 +85,7 @@ To build the Docker image locally:
 docker build -t myapp:latest .
 
 
-To run any command, replace <docker_image> with your image name (e.g., myapp:latest or josephpupava/myapp:latest if pulled from Docker Hub).
+To run any command, replace <docker_image> with your image name (e.g., myapp:latest or jpupava1/myapp:latest if pulled from Docker Hub).
 
 Examples:
 
