@@ -8,15 +8,13 @@ import picocli.CommandLine;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class IssueTrackerApplicationFuncionalTest {
+class IssueTrackerApplicationFunctionalTest {
 
     @Test
     void factoryBeanIsCreatedAndCreatesCommand() throws Exception {
         CommandLine.IFactory mockFactory = mock(CommandLine.IFactory.class);
         MainCommand mockCommand = mock(MainCommand.class);
         when(mockFactory.create(MainCommand.class)).thenReturn(mockCommand);
-
-        IssueTrackerApplication app = new IssueTrackerApplication(mockFactory);
 
         // Verify factory creates the command
         Object cmd = mockFactory.create(MainCommand.class);

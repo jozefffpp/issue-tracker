@@ -9,8 +9,7 @@ import picocli.CommandLine.Command;
         name = "IssueTrackerApplication",
         mixinStandardHelpOptions = true,
         subcommands = {CreateIssueCommand.class, UpdateIssueCommand.class, ListIssuesCommand.class},
-        description = "CLI to track issues in Google Sheets"
-)
+        description = "CLI to track issues in Google Sheets")
 public class MainCommand implements Runnable {
 
     @Override

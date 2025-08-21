@@ -1,0 +1,103 @@
+Issue Tracker CLI – User Documentation
+Overview
+
+The Issue Tracker CLI is a Java-based command-line application that allows users to track system issues directly in a Google Spreadsheet. The application is packaged as a Docker container, making it easy to run on any system with Docker installed.
+
+The app supports creating issues, updating their status, and listing issues filtered by status.
+
+Requirements
+
+Java 17+ (handled by Docker container)
+
+Docker installed on the system
+
+Access to the pre-configured Google Spreadsheet for issue tracking
+
+Commands
+1. Create a New Issue
+
+Create a new issue in the spreadsheet.
+
+Syntax:
+
+docker run --rm <docker_image> create -d "description" [-p parentId]
+
+
+Parameters:
+
+-d or --description (required): Description of the issue.
+
+-p or --parentId (optional): ID of the parent issue, if applicable.
+
+Example:
+
+docker run --rm josephpupava/myapp:latest create -d "Customer 360 job is not ingesting into Search Engine"
+docker run --rm josephpupava/myapp:latest create -d "Databricks job failing on parsing DoB" -p AD-1
+
+2. Update Issue Status
+
+Update the status of an existing issue.
+
+Syntax:
+
+docker run --rm <docker_image> update -i issueId -s status
+
+
+Parameters:
+
+-i or --issueId (required): ID of the issue to update.
+
+-s or --status (required): New status. Allowed values: OPEN, IN_PROGRESS, CLOSED.
+
+Example:
+
+docker run --rm josephpupava/myapp:latest update -i AD-1 -s IN_PROGRESS
+docker run --rm josephpupava/myapp:latest update -i AD-2 -s CLOSED
+
+3. List Issues
+
+List all existing issues filtered by status.
+
+Syntax:
+
+docker run --rm <docker_image> list -s status
+
+
+Parameters:
+
+-s or --status (required): Filter issues by status. Allowed values: OPEN, IN_PROGRESS, CLOSED.
+
+Example:
+
+docker run --rm josephpupava/myapp:latest list -s OPEN
+docker run --rm josephpupava/myapp:latest list -s CLOSED
+
+
+Output Example:
+
+ID	Description	Parent ID	Status	Created at	Updated at
+AD-1	Customer 360 Job is not ingesting		CLOSED	2024-10-01T10:02	2024-10-02T14:35
+AD-2	Databricks Job is failing on parsing	AD-1	OPEN	2024-10-03T16:12
+Docker Usage
+
+To build the Docker image locally:
+
+docker build -t myapp:latest .
+
+
+To run any command, replace <docker_image> with your image name (e.g., myapp:latest or josephpupava/myapp:latest if pulled from Docker Hub).
+
+Examples:
+
+docker run --rm myapp:latest create -d "New test issue"
+docker run --rm myapp:latest list -s OPEN
+
+Notes
+
+The application uses a facade layer for Google Sheets integration, allowing potential future extensions to other platforms (Office365, Jira, databases, etc.).
+
+The CLI is designed with modularity and SOLID principles for maintainability.
+
+Unit and functional tests cover the application to ensure correctness.
+
+All source code is version-controlled and available on GitHub

@@ -2,6 +2,7 @@ package com.gohealth.issue_tracker.junit.command.command;
 
 import com.gohealth.issue_tracker.command.ListIssuesCommand;
 import com.gohealth.issue_tracker.model.Issue;
+import com.gohealth.issue_tracker.model.IssueStatus;
 import com.gohealth.issue_tracker.service.IssueService;
 import org.junit.jupiter.api.Test;
 
@@ -27,10 +28,17 @@ class ListIssuesCommandTest {
     @InjectMocks
     private ListIssuesCommand listIssuesCommand;
 
+    // Reflection helper to set private field
+    private static void setField(Object target, String fieldName, Object value) throws Exception {
+        var field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
     @Test
     void testRunPrintsIssuesTable() throws Exception {
         // Arrange
-        setField(listIssuesCommand, "status", "OPEN");
+        setField(listIssuesCommand, "status", IssueStatus.OPEN);
 
         Issue issue1 = new Issue();
         issue1.setId("AD-1");
@@ -48,38 +56,50 @@ class ListIssuesCommandTest {
         issue2.setCreatedAt(LocalDateTime.of(2025, 8, 19, 9, 30));
         issue2.setUpdatedAt(LocalDateTime.of(2025, 8, 20, 12, 0));
 
-        when(issueService.listIssues("OPEN")).thenReturn(List.of(issue1, issue2));
+        when(issueService.listIssues(IssueStatus.OPEN.name())).thenReturn(List.of(issue1, issue2));
 
-        // Capture System.out
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
         PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outContent));
 
-        // Act
-        listIssuesCommand.run();
+        try {
+            // Act
+            listIssuesCommand.run();
 
-        // Assert
-        String output = outContent.toString();
-        assertTrue(output.contains("AD-1 | Test issue 1 | PARENT-1 | OPEN"));
-        assertTrue(output.contains("AD-2 | Test issue 2 | null | OPEN"));
+            // Assert
+            String output = outContent.toString();
 
-        // Reset System.out
-        System.setOut(originalOut);
-    }
+            // Define the format string again to build the expected output dynamically
+            String format = "| %-10s | %-30s | %-15s | %-15s | %-20s | %-20s |";
 
-    // Reflection helper to set private field
-    private static void setField(Object target, String fieldName, Object value) throws Exception {
-        var field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
+            // Build the expected strings with the same formatting logic as the command
+            String expectedLine1 = String.format(
+                    format,
+                    issue1.getId(),
+                    issue1.getDescription(),
+                    issue1.getParentId(),
+                    issue1.getStatus(),
+                    issue1.getCreatedAt(),
+                    issue1.getUpdatedAt()
+            );
+
+            String expectedLine2 = String.format(
+                    format,
+                    issue2.getId(),
+                    issue2.getDescription(),
+                    "null", // Special handling for null parentId
+                    issue2.getStatus(),
+                    issue2.getCreatedAt(),
+                    issue2.getUpdatedAt()
+            );
+
+            // Now assert that the output contains the exact expected strings
+            assertTrue(output.contains(expectedLine1));
+            assertTrue(output.contains(expectedLine2));
+
+        } finally {
+            // Reset System.out
+            System.setOut(originalOut);
+        }
     }
 }
-
-/*What this test does:
-
-Sets the status field manually (OPEN) since Picocli normally injects it.
-
-Mocks issueService.listIssues() to return two fake issues.
-
-Captures the printed output to verify that the table contains both issues with ID, Description, Parent ID, Status, Created At, and Updated At.
-*/

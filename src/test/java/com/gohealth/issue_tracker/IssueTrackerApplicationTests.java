@@ -48,15 +48,11 @@ class IssueTrackerApplicationTests {
         MainCommand mainCommand = mock(MainCommand.class);
         when(mockFactory.create(MainCommand.class)).thenReturn(mainCommand);
 
-        CommandLine cmdMock = mock(CommandLine.class);
-        // To inject CommandLine mock, you may need to refactor run() to allow constructor injection
-        // Or just verify factory.create() is called
         IssueTrackerApplication app = new IssueTrackerApplication(mockFactory);
 
         app.run("arg1", "arg2");
 
         verify(mockFactory).create(MainCommand.class);
-        // Can't directly verify cmd.execute() unless you refactor run()
     }
 
     /**
@@ -69,7 +65,6 @@ class IssueTrackerApplicationTests {
 
         IssueTrackerApplication app = new IssueTrackerApplication(mockFactory);
 
-        // Because lambda can throw Exception, assertDoesNotThrow now works
         assertDoesNotThrow(() -> app.run("arg1", "arg2"));
     }
 }

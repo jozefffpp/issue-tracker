@@ -1,6 +1,7 @@
 package com.gohealth.issue_tracker.service;
 
 import com.gohealth.issue_tracker.model.Issue;
+import com.gohealth.issue_tracker.model.IssueStatus;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 @Service
@@ -23,119 +25,103 @@ public class GoogleSheetsIssueService implements IssueService {
     private final String SHEET_NAME = "Sheet1";
     private final String SPREADSHEET_ID = "1tcWPle1hz2XBf7iZv2lcruIj4O7FRo6w5mUHUiu8FYU";
     private final String RANGE = "Sheet1!A:F"; // A: ID, B: Description, C: Parent ID, D: Status, E: Created at, F: Updated at
-    private final Map<String, Issue> issues = new HashMap<>();
 
     public GoogleSheetsIssueService() throws GeneralSecurityException, IOException {
         sheetsService = new Sheets.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
                 GsonFactory.getDefaultInstance(),
                 getCredentials()
-        ).setApplicationName("Issue Tracker").build();
+        ).setApplicationName("Issue Tracker CLI").build();
     }
 
-    // Constructor for testing (inject mock)
-    public GoogleSheetsIssueService(Sheets sheetsService) {
-        this.sheetsService = sheetsService;
-    }
-
-    private static Credential getCredentials() throws IOException {
+    private Credential getCredentials() throws IOException {
         InputStream in = GoogleSheetsIssueService.class.getResourceAsStream("/credentials.json");
-        if (in == null) {
-            throw new IllegalStateException("credentials.json not found in resources folder!");
+        return GoogleCredential.fromStream(in).createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
+    }
+
+    // NEW: Method to check if an issue exists
+    private boolean issueExists(String issueId) throws IOException {
+        ValueRange response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, RANGE).execute();
+        List<List<Object>> values = response.getValues();
+        if (values != null && values.size() > 1) {
+            for (int i = 1; i < values.size(); i++) {
+                List<Object> row = values.get(i);
+                if (row.get(0).toString().equals(issueId)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Method to get the next issue ID from a dedicated counter cell
+    private String getNextIdFromCounter() throws IOException {
+        String counterRange = "Counters!A1";
+        ValueRange response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, counterRange).execute();
+        List<List<Object>> values = response.getValues();
+        int counter = 1;
+        if (values != null && !values.isEmpty()) {
+            counter = Integer.parseInt(values.get(0).get(0).toString());
         }
 
-        GoogleCredential credential = GoogleCredential.fromStream(in)
-                .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
-        return credential;
-    }
+        ValueRange nextValue = new ValueRange().setValues(List.of(List.of(counter + 1)));
+        sheetsService.spreadsheets().values().update(SPREADSHEET_ID, counterRange, nextValue)
+                .setValueInputOption("RAW").execute();
 
+        return "AD-" + counter;
+    }
 
     @Override
     public Issue createIssue(String description, String parentId) {
         try {
-            // 1. Get all existing IDs from the sheet
-            String range = SHEET_NAME + "!A:A"; // Column A = IDs
-            ValueRange response = sheetsService.spreadsheets().values()
-                    .get(SPREADSHEET_ID, range)
-                    .execute();
-
-            List<List<Object>> values = response.getValues();
-
-            // 2. Determine the next ID
-            String newId;
-            if (values == null || values.size() <= 1) {
-                // Only header row or empty sheet
-                newId = "AD-1";
-            } else {
-                String lastId = values.get(values.size() - 1).get(0).toString();
-                int lastNum = Integer.parseInt(lastId.replace("AD-", ""));
-                newId = "AD-" + (lastNum + 1);
+            // Validate parent ID
+            if (parentId != null && !issueExists(parentId)) {
+                throw new RuntimeException("Parent issue not found with ID: " + parentId);
             }
 
-            // 3. Create Issue object
-            Issue issue = new Issue();
-            issue.setId(newId);
-            issue.setDescription(description);
-            issue.setParentId(parentId);
-            issue.setStatus("OPEN");
-            issue.setCreatedAt(LocalDateTime.now());
-            issue.setUpdatedAt(LocalDateTime.now());
+            String newId = getNextIdFromCounter();
 
-            // 4. Append new row to the sheet
-            List<Object> row = Arrays.asList(
-                    issue.getId(),
-                    issue.getDescription(),
-                    issue.getParentId() != null ? issue.getParentId() : "",
-                    issue.getStatus(),
-                    issue.getCreatedAt().toString(),
-                    issue.getUpdatedAt().toString()
-            );
-
-            ValueRange appendBody = new ValueRange().setValues(Collections.singletonList(row));
-            sheetsService.spreadsheets().values()
-                    .append(SPREADSHEET_ID, RANGE, appendBody)
-                    .setValueInputOption("USER_ENTERED")
+            ValueRange body = new ValueRange()
+                    .setValues(List.of(List.of(
+                            newId,
+                            description,
+                            parentId,
+                            IssueStatus.OPEN.name(),
+                            LocalDateTime.now().toString(),
+                            LocalDateTime.now().toString()
+                    )));
+            sheetsService.spreadsheets().values().append(SPREADSHEET_ID, RANGE, body)
+                    .setValueInputOption("RAW")
+                    .setInsertDataOption("INSERT_ROWS")
                     .execute();
 
-            return issue;
+            return new Issue(newId, description, parentId, IssueStatus.OPEN.name());
         } catch (IOException e) {
-            throw new RuntimeException("Failed to create issue", e);
+            e.printStackTrace();
         }
+        return null;
     }
-
-    //create \
-    //  -d "Databricks Job is failing on parsing DoB" \
-    //  -p AD-2
-
-    // java -jar target/issue-tracker-0.0.1-SNAPSHOT.jar create -d "Databricks new2"
 
     @Override
     public Issue updateIssue(String id, String status) {
         try {
             ValueRange response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, RANGE).execute();
             List<List<Object>> values = response.getValues();
-            if (values == null || values.isEmpty()) return null;
+            if (values != null && values.size() > 1) {
+                for (int i = 1; i < values.size(); i++) {
+                    List<Object> row = values.get(i);
+                    if (row.get(0).equals(id)) {
+                        String rangeToUpdate = SHEET_NAME + "!D" + (i + 1) + ":F" + (i + 1);
 
-            for (int i = 1; i < values.size(); i++) { // start at 1 to skip header
-                List<Object> row = values.get(i);
-                if (row.get(0).equals(id)) {
-                    row.set(3, status); // Status column D (index 3)
-                    row.set(5, LocalDateTime.now().toString()); // Updated at column F (index 5)
+                        ValueRange updatedValues = new ValueRange()
+                                .setValues(List.of(List.of(status, LocalDateTime.now().toString())));
 
-                    ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
-                    sheetsService.spreadsheets().values()
-                            .update(SPREADSHEET_ID, "Sheet1!A" + (i + 1) + ":F" + (i + 1), body)
-                            .setValueInputOption("RAW")
-                            .execute();
+                        sheetsService.spreadsheets().values().update(SPREADSHEET_ID, rangeToUpdate, updatedValues)
+                                .setValueInputOption("RAW")
+                                .execute();
 
-                    Issue issue = new Issue();
-                    issue.setId((String) row.get(0));
-                    issue.setDescription((String) row.get(1));
-                    issue.setParentId((String) row.get(2));
-                    issue.setStatus((String) row.get(3));
-                    issue.setCreatedAt(LocalDateTime.parse((String) row.get(4)));
-                    issue.setUpdatedAt(LocalDateTime.parse((String) row.get(5)));
-                    return issue;
+                        return new Issue(id, (String) row.get(1), (String) row.get(2), status);
+                    }
                 }
             }
         } catch (IOException e) {
@@ -143,9 +129,6 @@ public class GoogleSheetsIssueService implements IssueService {
         }
         return null;
     }
-
-//java -jar target/issue-tracker-0.0.1-SNAPSHOT.jar update -i AD-5 -s IN_PROGRESS
-
 
     @Override
     public List<Issue> listIssues(String status) {
@@ -162,8 +145,19 @@ public class GoogleSheetsIssueService implements IssueService {
                         issue.setDescription((String) row.get(1));
                         issue.setParentId((String) row.get(2));
                         issue.setStatus((String) row.get(3));
-                        issue.setCreatedAt(LocalDateTime.parse((String) row.get(4)));
-                        issue.setUpdatedAt(LocalDateTime.parse((String) row.get(5)));
+
+                        try {
+                            issue.setCreatedAt(LocalDateTime.parse((String) row.get(4)));
+                        } catch (DateTimeParseException | NullPointerException e) {
+                            System.err.println("Warning: Could not parse Created At date for issue " + issue.getId());
+                        }
+
+                        try {
+                            issue.setUpdatedAt(LocalDateTime.parse((String) row.get(5)));
+                        } catch (DateTimeParseException | NullPointerException e) {
+                            System.err.println("Warning: Could not parse Updated At date for issue " + issue.getId());
+                        }
+
                         issues.add(issue);
                     }
                 }
@@ -173,6 +167,4 @@ public class GoogleSheetsIssueService implements IssueService {
         }
         return issues;
     }
-
-    //java -jar target/issue-tracker-0.0.1-SNAPSHOT.jar list -s CLOSED
 }

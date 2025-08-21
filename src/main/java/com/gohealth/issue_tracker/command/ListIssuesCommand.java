@@ -1,6 +1,7 @@
 package com.gohealth.issue_tracker.command;
 
 import com.gohealth.issue_tracker.model.Issue;
+import com.gohealth.issue_tracker.model.IssueStatus;
 import com.gohealth.issue_tracker.service.IssueService;
 import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
@@ -13,7 +14,7 @@ import java.util.List;
 public class ListIssuesCommand implements Runnable {
 
     @Option(names = {"-s", "--status"}, required = true, description = "Status (OPEN, IN_PROGRESS, CLOSED)")
-    private String status;
+    private IssueStatus status;
 
     private final IssueService issueService;
 
@@ -24,21 +25,27 @@ public class ListIssuesCommand implements Runnable {
 
     @Override
     public void run() {
-        List<Issue> issues = issueService.listIssues(status);
+        List<Issue> issues = issueService.listIssues(status.name());
         if (issues.isEmpty()) {
             System.out.println("No issues found with status: " + status);
         } else {
-            System.out.println("-------------------------------------------------------------------");
-            System.out.println("| ID | Description | Parent ID | Status | Created At | Updated At |");
-            System.out.println("-------------------------------------------------------------------");
-            issues.forEach(issue -> System.out.println(
-                    issue.getId() + " | " +
-                            issue.getDescription() + " | " +
-                            issue.getParentId() + " | " +
-                            issue.getStatus() + " | " +
-                            issue.getCreatedAt() + " | " +
-                            issue.getUpdatedAt()
+            // fixed format string for consistent column widths
+            String format = "| %-10s | %-30s | %-15s | %-15s | %-20s | %-20s |%n";
+
+            System.out.println("----------------------------------------------------------------------------------------------------------------------------------");
+            System.out.printf(format, "ID", "Description", "Parent ID", "Status", "Created At", "Updated At");
+            System.out.println("----------------------------------------------------------------------------------------------------------------------------------");
+
+            issues.forEach(issue -> System.out.printf(
+                    format,
+                    issue.getId(),
+                    issue.getDescription(),
+                    issue.getParentId() != null ? issue.getParentId() : "null", // Handle null Parent ID
+                    issue.getStatus(),
+                    issue.getCreatedAt(),
+                    issue.getUpdatedAt()
             ));
+            System.out.println("----------------------------------------------------------------------------------------------------------------------------------");
         }
     }
 }
