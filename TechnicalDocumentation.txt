@@ -1,0 +1,62 @@
+Issue Tracker Command Line Interface
+1. Overview
+The Issue Tracker CLI is a command-line application built with Spring Boot that allows users to manage issues directly within a Google Sheet. It provides commands to create new issues, update existing ones, and list issues based on their status. The primary purpose of this application is to serve as a simple, text-based tool for tracking tasks without a dedicated web interface.
+
+2. Core Technologies
+Java 17+: The core programming language for the application.
+
+Spring Boot: Used for dependency injection and to create a self-contained, runnable application. Spring's component scanning simplifies the management of the various command and service classes.
+
+PicoCLI: A lightweight framework for building powerful command-line applications. It handles parsing command-line arguments and options and automatically generates help messages. Each subcommand (create, update, list) is a separate class annotated with @Command.
+
+Google Sheets API v4: The API client library used to read from and write to the Google Sheet acting as the application's data store.
+
+3. Application Architecture
+The application follows a modular, layered architecture to separate concerns.
+
+com.gohealth.issue_tracker.command: This package contains all the command classes that interact with the user via the command line. Each class (e.g., CreateIssueCommand, UpdateIssueCommand) corresponds to a specific subcommand and uses PicoCLI annotations to define its behavior and arguments. These commands depend on the IssueService to perform their business logic.
+
+com.gohealth.issue_tracker.model: This package holds the data models, such as the Issue class and the IssueStatus enum. These objects represent the data being managed by the application.
+
+com.gohealth.issue_tracker.service: This package contains the service layer, which implements the core business logic. The IssueService interface defines the contract for issue management operations (createIssue, updateIssue, listIssues). The GoogleSheetsIssueService class is the concrete implementation that handles all interactions with the Google Sheets API.
+
+4. Configuration
+To function correctly, the application requires a Google Service Account with access to the specified Google Sheet.
+
+Enable the Google Sheets API: In the Google Cloud Console, enable the Google Sheets API for your project.
+
+Create a Service Account: Go to APIs & Services -> Credentials and create a new service account.
+
+Download the Key File: Download the JSON key file for the service account.
+
+Add Key File to Project: Place the downloaded credentials.json file in your project's src/main/resources directory.
+
+Share the Google Sheet: Share the Google Sheet with the email address of the service account you created, granting it Editor permissions.
+
+5. Usage
+The application is a runnable JAR that can be executed using Maven.
+
+General Command Syntax:
+
+mvn spring-boot:run -Dspring-boot.run.arguments="[command],[arguments]"
+
+Commands:
+
+Create Issue: Creates a new issue with a description and optional parent ID.
+
+mvn spring-boot:run -Dspring-boot.run.arguments="create,--description='Bug on checkout page',--parentId='AD-123'"
+
+Update Issue: Updates an existing issue's status.
+
+mvn spring-boot:run -Dspring-boot.run.arguments="update,--id='AD-456',--status='IN_PROGRESS'"
+
+List Issues: Lists all issues that match a specific status.
+
+mvn spring-boot:run -Dspring-boot.run.arguments="list,--status='OPEN'"
+
+6. Testing Strategy
+The application uses JUnit 5 and Mockito for testing.
+
+Unit Tests: Located in the src/test directory, these tests verify the functionality of individual components (e.g., the GoogleSheetsIssueService). For these tests, the Google Sheets API client is mocked using Mockito to isolate the code from network calls and the unpredictable state of the real Google Sheet. This ensures the tests are fast, reliable, and deterministic.
+
+Functional Tests: These tests, such as IssueTrackerFunctionalTests.java, are designed to verify the entire application flow, including interactions with the real Google Sheet. They are used to confirm that the GoogleSheetsIssueService correctly integrates with the actual Google Sheets API.
