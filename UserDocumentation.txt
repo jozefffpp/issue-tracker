@@ -11,7 +11,11 @@ Java 17+ (handled by Docker container)
 
 Docker installed on the system
 
-Access to the pre-configured Google Spreadsheet for issue tracking
+Pre-configure access to the Google Spreadsheet in resources/credentials.json for issue tracking
+
+Download image:
+
+docker pull jpupava1/myapp:latest
 
 Commands
 1. Create a New Issue
